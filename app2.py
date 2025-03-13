@@ -3,12 +3,6 @@ import matplotlib.pyplot as plt
 import streamlit as st
 from scipy.integrate import solve_ivp
 import time  
-import matplotlib.image as mpimg
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-
-# === Charger les images ===
-lapin_img = mpimg.imread("rabbit.png")  # Image des proies (lapins)
-renard_img = mpimg.imread("fox.png")  # Image des prédateurs (renards)
 
 # === Modèle Lotka-Volterra ===
 def lotka_volterra(t, z, alpha, beta, delta, gamma):
@@ -23,12 +17,6 @@ def run_simulation(alpha, beta, delta, gamma, x0, y0, t_max, points):
     t_eval = np.linspace(*t_span, points)
     sol = solve_ivp(lotka_volterra, t_span, [x0, y0], args=(alpha, beta, delta, gamma), t_eval=t_eval)
     return sol.t, sol.y[0], sol.y[1]
-
-# === Fonction pour ajouter une image à l'affichage ===
-def add_image(ax, img, x, y, zoom=0.05):
-    imagebox = OffsetImage(img, zoom=zoom)
-    ab = AnnotationBbox(imagebox, (x, y), frameon=False)
-    ax.add_artist(ab)
 
 # === Interface Streamlit ===
 st.title("Simulation Lotka-Volterra 🦊🐰")
@@ -46,7 +34,7 @@ with col1:
     """)
 
     st.subheader("Paramètres de simulation")
-    alpha = st.slider("Taux de croissance des proies (α)", 0.0, 1.0, 0.4/365, 0.01)
+    alpha = st.slider("Taux de croissance des proies (α)", 0.0, 1.0, 0.4, 0.01)
     beta = st.slider("Taux de prédation (β)", 0.0, 0.1, 0.02, 0.001)
     delta = st.slider("Conversion des proies en prédateurs (δ)", 0.0, 0.2, 0.1, 0.001)
     gamma = st.slider("Mortalité des prédateurs (γ)", 0.0, 1.0, 0.3, 0.01)
@@ -55,6 +43,7 @@ with col1:
     y0 = st.number_input("Population initiale des prédateurs", 0, 1000, 5)
 
     t_max = st.slider("Temps de simulation", 5, 100, 10)
+   # points = st.slider("Nombre de points", 10, 100, 30)
 
     # Bouton pour lancer la simulation
     run_simulation_btn = st.button("Simuler 🚀")
@@ -62,8 +51,16 @@ with col1:
 with col2:
     if run_simulation_btn:
         with st.spinner("Simulation en cours... ⏳"):
+            # Réinitialisation des valeurs
+            st.session_state.x_values = [x0]  # Remet les proies à leur valeur initiale
+            st.session_state.y_values = [y0]  # Remet les prédateurs à leur valeur initiale
+
             # Exécute la simulation
             t, x, y = run_simulation(alpha, beta, delta, gamma, x0, y0, t_max, 100)
+
+            # Stocke les nouvelles valeurs
+            st.session_state.x_values = x.copy()
+            st.session_state.y_values = y.copy()
 
             st.success("Simulation terminée ✅")
 
@@ -73,56 +70,53 @@ with col2:
             ax.plot(t, y, label="Prédateurs (Renards)", color="red")
             ax.set_xlabel("Temps")
             ax.set_ylabel("Population")
-            ax.set_title("Dynamique Lotka-Volterra", color="white")
+            ax.set_facecolor("black")  # Fond noir
+            ax.title.set_color("white")  # Titre en blanc
             ax.legend()
+            ax.set_title("Dynamique Lotka-Volterra")
             ax.grid()
-            ax.set_facecolor("black")
             st.pyplot(fig)
 
-                        # === ANIMATION AVEC IMAGES ===
+            # === ANIMATION EN TEMPS RÉEL ===
             st.subheader("Évolution des populations 📍")
-            
-            # Création d'un espace pour l'affichage dynamique
+
+            # Création d'un espace pour mettre à jour l'affichage
             plot_spot = st.empty()
-            
-            # Filtrer les temps pour n'afficher que ceux qui sont entiers
-            entier_times = [i for i in range(1, t_max + 1)]  # Temps entier de 1 à t_max
-            
-            for i in entier_times:
-                # Ajustement dynamique de la taille du cadre
-                max_population = max(max(x), max(y))
-                lim = max(10, max_population / 5)
-            
-                fig_anim, ax_anim = plt.subplots(figsize=(10, 8))
-                ax_anim.set_xlim(0, lim)
-                ax_anim.set_ylim(0, lim)
+
+            for i in range(len(t)):
+                fig_anim, ax_anim = plt.subplots(figsize=(6, 6))
+                ax_anim.set_xlim(0, 10)
+                ax_anim.set_ylim(0, 10)
                 ax_anim.set_xticks([])
                 ax_anim.set_yticks([])
-                ax_anim.set_facecolor("white")
             
-                # Nombre d'animaux proportionnel aux valeurs simulées
-                n_lapins = max(0, round(x[i-1]))  # x[i-1] pour avoir les bonnes valeurs à temps i
-                n_renards = max(0, round(y[i-1]))  # y[i-1] pour avoir les bonnes valeurs à temps i
+                # Fond noir
+                ax_anim.set_facecolor("black")
             
-                # Titre dynamique
-                ax_anim.set_title(f"Temps: {i} | Lapins: {n_lapins} | Renards: {n_renards}",
-                                  fontsize=14, color="black", fontweight="bold")
+                # Nombre réel d'individus (limité à 500 pour éviter un affichage trop dense)
+                n_lapins = min(500, max(0, round(st.session_state.x_values[i])))
+                n_renards = min(500, max(0, round(st.session_state.y_values[i])))
             
-                # Position aléatoire des lapins et renards
-                lapin_positions = np.random.rand(n_lapins, 2) * (lim - 2) + 1
-                renard_positions = np.random.rand(n_renards, 2) * (lim - 2) + 1
+                # Titre avec informations sur les populations
+                ax_anim.set_title(f"Temps: {t[i]:.1f} | Lapins: {round(st.session_state.x_values[i])} | Renards: {round(st.session_state.y_values[i])}",
+                                  fontsize=12, color="white")
             
-                # Ajouter les images des lapins
-                for pos in lapin_positions:
-                    add_image(ax_anim, lapin_img, pos[0], pos[1], zoom=0.05)
+                # Ajout des points pour représenter les populations
+                ax_anim.scatter(np.random.rand(n_lapins) * 8 + 1, 
+                                np.random.rand(n_lapins) * 8 + 1, 
+                                color="blue", label=f"Lapins: {round(st.session_state.x_values[i])}", alpha=0.7)
             
-                # Ajouter les images des renards
-                for pos in renard_positions:
-                    add_image(ax_anim, renard_img, pos[0], pos[1], zoom=0.05)
+                ax_anim.scatter(np.random.rand(n_renards) * 8 + 1, 
+                                np.random.rand(n_renards) * 8 + 1, 
+                                color="red", label=f"Renards: {round(st.session_state.y_values[i])}", alpha=0.7)
+            
+                # Ajout de la légende avec fond noir et texte en blanc
+                legend = ax_anim.legend(facecolor="black", edgecolor="white", fontsize=10)
+                for text in legend.get_texts():
+                    text.set_color("white")  # Changer la couleur du texte de la légende en blanc
             
                 # Affichage dans Streamlit
                 plot_spot.pyplot(fig_anim)
-                plt.close(fig_anim)
+                plt.close(fig_anim)  # Évite les fuites de mémoire
             
-                time.sleep(0.01)  # Pause pour ralentir l'animation
-
+                time.sleep(0.3)  # Pause pour ralentir l'animation
