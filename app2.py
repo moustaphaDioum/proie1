@@ -72,19 +72,19 @@ with col1:
 
     # Texte personnalisé avec couleur #8e44ad
     st.markdown('<p style="color: #8e44ad;">Taux de prédation (β)</p>', unsafe_allow_html=True)
-    beta = st.slider(" ", 0.0, 1.0, 0.02, 0.04)
+    beta = st.slider(" ", 0.0, 1.0, 0.02, 0.05)
     
     st.markdown('<p style="color: #8e44ad;">Conversion des proies en prédateurs (δ)</p>', unsafe_allow_html=True)
-    delta = st.slider(" ", 0.0, 1.0, 0.02, 0.05)
+    delta = st.slider(" ", 0.0, 1.0, 0.01, 0.05)
     
     st.markdown('<p style="color: #8e44ad;">Mortalité des prédateurs (γ)</p>', unsafe_allow_html=True)
-    gamma = st.slider(" ", 0.0, 1.0, 0.3, 0.02)
+    gamma = st.slider(" ", 0.0, 1.0, 0.3, 0.05)
     
     st.markdown('<p style="color: #8e44ad;">Population initiale des proies</p>', unsafe_allow_html=True)
-    x0 = st.number_input(" ", 0, 1000, 100)
+    x0 = st.number_input(" ", 0, 1000000, 100)
     
     st.markdown('<p style="color: #8e44ad;">Population initiale des prédateurs</p>', unsafe_allow_html=True)
-    y0 = st.number_input(" ", 0, 1000, 20)
+    y0 = st.number_input(" ", 0, 1000000, 20)
     
     st.markdown('<p style="color: #8e44ad;">Temps de simulation</p>', unsafe_allow_html=True)
     t_max = st.slider(" ", 5, 100, 10)
